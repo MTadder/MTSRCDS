@@ -5,38 +5,66 @@ using System.Windows.Forms;
 
 namespace MTSRCDS {
     public partial class MainForm : Form {
-        Dictionary<String, String> arguments = new();
-        Dictionary<String, DirectoryInfo> keyDirs = new();
+        MTLibrary.DictionaryFile ArgumentsFile;
 
         public MainForm() {
             this.InitializeComponent();
 
-            // Fill arguments dictionary
+            this.ArgumentsFile = new("arguments.bin", true);
             foreach(String arg in this.CBArgument.Items)
-                this.arguments.Add(arg, String.Empty);
+                if (!this.ArgumentsFile.IsKey(arg)) {
+                    this.ArgumentsFile.Set(arg);
+                }
         }
         private void MainForm_Load(Object sender, EventArgs e) {
-
+            this.TBWorkingDir.Text = Environment.CurrentDirectory + @"\";
+            CBArgument.SelectedIndex = 0;
+            TBHostname.Text = this.ArgumentsFile.Get("Hostname");
+            TBLoadingURL.Text = this.ArgumentsFile.Get("LoadingURL");
         }
-        private void BExit_Click(Object sender, EventArgs e) {
-            this.Close();
-        }
+        private void BExit_Click(Object sender, EventArgs e) => this.Close();
 
         private void CBArgument_SelectedIndexChanged(Object sender, EventArgs e) {
             if (!this.CBLockAssigner.Checked) {
-                this.TBArgValue.Text =
-                    this.arguments[this.CBArgument.Text] ?? String.Empty;
+                String selectedArg = this.CBArgument.Text.Trim();
+                this.TBArgValue.Text = this.ArgumentsFile.Get(selectedArg);
             }
         }
 
-        private void BRefreshArg_Click(Object sender, EventArgs e) {
-            String got = this.arguments[this.CBArgument.Text] ?? String.Empty;
-            if (String.IsNullOrEmpty(got) || got != this.TBArgValue.Text) {
-                this.arguments[this.CBArgument.Text] = this.TBArgValue.Text;
+        private void BInterpArg_Click(Object sender, EventArgs e) {
+            String selectedArg = this.CBArgument.Text.Trim();
+            String storedArg = this.ArgumentsFile.Get(selectedArg);
+            String candidateArg = this.TBArgValue.Text.Trim();
+            if (candidateArg.Equals(storedArg) == false
+                && candidateArg.Equals(String.Empty) == false) {
+                this.ArgumentsFile.Set(selectedArg, candidateArg);
             } else {
-                this.TBArgValue.Text = got.Trim();
+                if (CBLockAssigner.Checked) {
+                    this.ArgumentsFile.Set(selectedArg, String.Empty);
+                } else {
+                    this.TBArgValue.Text = storedArg;
+                }
             }
         }
 
+        private void CBLockAssigner_CheckedChanged(Object sender, EventArgs e) {
+            this.TBArgValue.Enabled = !this.CBLockAssigner.Checked;
+        }
+
+        private void TBLoadingURL_TextChanged(Object sender, EventArgs e) {
+            this.ArgumentsFile.Set("LoadingURL", this.TBLoadingURL.Text);
+        }
+
+        private void TBHostname_TextChanged(Object sender, EventArgs e) {
+            this.ArgumentsFile.Set("Hostname", this.TBHostname.Text);
+        }
+
+        private void MainForm_FormClosing(Object sender, FormClosingEventArgs e) {
+            this.ArgumentsFile.Save();
+        }
+
+        private void TBWorkingDir_TextChanged(Object sender, EventArgs e) {
+
+        }
     }
 }
